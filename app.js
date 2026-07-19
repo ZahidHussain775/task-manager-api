@@ -1,4 +1,6 @@
 const express = require("express");
+const swaggerUi = require("swagger-ui-express");
+const yaml = require("yamljs");
 
 const app = express();
 app.use(express.json());
@@ -115,6 +117,10 @@ app.delete("/tasks/:id", (req, res) => {
     res.status(204).send();
 });
 
+
+const swaggerDocument = yaml.load("./openapi.yaml");
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
 app.listen(3000, () => {
