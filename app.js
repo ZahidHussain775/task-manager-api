@@ -81,31 +81,41 @@ app.put("/tasks/:id", (req, res) => {
     const { title, done } = req.body;
 
     const task = tasks.find(t => t.id === id);
-
     if (!task) {
         return res.status(404).json({
             error: `Task ${id} not found`
         });
     }
-
+    if (title === undefined && done === undefined) {
+        return res.status(400).json({
+            error: "Request body cannot be empty"
+        });
+    }
     if (title !== undefined) {
+        if (title.trim() === "") {
+            return res.status(400).json({
+                error: "Title is required"
+            });
+        }
+
         task.title = title;
     }
-
     if (done !== undefined) {
+        if (typeof done !== "boolean") {
+            return res.status(400).json({
+                error: "Done must be true or false"
+            });
+        }
+
         task.done = done;
     }
-
     res.json(task);
-
 });
-
 
 app.delete("/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id);
 
     const index = tasks.findIndex(t => t.id === id);
-
     if (index === -1) {
         return res.status(404).json({
             error: `Task ${id} not found`
@@ -113,13 +123,11 @@ app.delete("/tasks/:id", (req, res) => {
     }
 
     tasks.splice(index, 1);
-
     res.status(204).send();
 });
 
 
 const swaggerDocument = yaml.load("./openapi.yaml");
-
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
