@@ -107,52 +107,67 @@ app.put("/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id);
     const { title, done } = req.body;
 
-    const task = tasks.find(t => t.id === id);
-    if (!task) {
-        return res.status(404).json({
-            error: `Task ${id} not found`
-        });
-    }
     if (title === undefined && done === undefined) {
         return res.status(400).json({
             error: "Request body cannot be empty"
         });
     }
-    if (title !== undefined) {
-        if (title.trim() === "") {
-            return res.status(400).json({
-                error: "Title is required"
+
+    db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, task) => {
+        if (err) {
+            return res.status(500).json({
+                error: err.message
             });
         }
 
-        task.title = title;
-    }
-    if (done !== undefined) {
-        if (typeof done !== "boolean") {
-            return res.status(400).json({
-                error: "Done must be true or false"
+        if (!task) {
+            return res.status(404).json({
+                error: `Task ${id} not found`
             });
         }
 
-        task.done = done;
-    }
-    res.json(task);
+        const updatedTitle = title !== undefined ? title : task.title;
+        const updatedDone = done !== undefined ? (done ? 1 : 0) : task.done;
+
+        db.run(
+            "UPDATE tasks SET title = ?, done = ? WHERE id = ?",
+            [updatedTitle, updatedDone, id],
+            function (err) {
+                if (err) {
+                    return res.status(500).json({
+                        error: err.message
+                    });
+                }
+
+                res.json({
+                    id,
+                    title: updatedTitle,
+                    done: updatedDone
+                });
+            }
+        );
+    });
 });
 
 app.delete("/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id);
 
-    const index = tasks.findIndex(t => t.id === id);
-    if (index === -1) {
-        return res.status(404).json({
-            error: `Task ${id} not found`
-        });
-    }
+    db.run("DELETE FROM tasks WHERE id = ?", [id], function (err) {
+        if (err) {
+            return res.status(500).json({
+                error: err.message
+            });
+        }
 
-    tasks.splice(index, 1);
-    res.status(204).send();
+        if (this.changes === 0) {
+            return res.status(404).json({
+                error: `Task ${id} not found`
+            });
+        }
+
+        res.status(204).send();
+    });
 });
-
 
 const swaggerDocument = yaml.load("./openapi.yaml");
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
