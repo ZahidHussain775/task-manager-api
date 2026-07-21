@@ -243,13 +243,11 @@ task-manager-api/
 
 Save your Swagger screenshot as:
 
-```
 swagger.jpg
-```
 
-```markdown
+markdown
 ![Swagger UI](swagger.jpg)
-```
+
 
 ---
 
@@ -261,11 +259,9 @@ Open `database/tasks.db` using **DB Browser for SQLite** and save a screenshot a
 database-viewer.png
 ```
 
-```markdown
+markdown
 ![SQLite Database](database-viewer.png)
-```
 
----
 
 # Sample Task Object
 
