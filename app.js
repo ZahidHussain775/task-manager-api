@@ -1,9 +1,11 @@
 const express = require("express");
 const swaggerUi = require("swagger-ui-express");
 const yaml = require("yamljs");
+const db = require("./database/db");
 
 const app = express();
 app.use(express.json());
+
 
 let tasks = [
   {
