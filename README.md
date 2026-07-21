@@ -1,10 +1,12 @@
 # Task Manager API
 
-A simple RESTful Task Manager API built with **Node.js**, **Express.js**, and **Swagger UI** as part of the **FlyRank Backend AI Engineering Internship** assignment.
+A simple RESTful Task Manager API built with **Node.js**, **Express.js**, **SQLite**, and **Swagger UI** as part of the **FlyRank Backend AI Engineering Internship**.
+
+The project demonstrates how to build a CRUD API with persistent data storage using SQLite while documenting the API using OpenAPI (Swagger).
 
 ---
 
-## Features
+# Features
 
 - Create a new task
 - Get all tasks
@@ -12,35 +14,53 @@ A simple RESTful Task Manager API built with **Node.js**, **Express.js**, and **
 - Update an existing task
 - Delete a task
 - Health check endpoint
+- Persistent task storage using SQLite
+- Automatic database and table creation
+- Automatic insertion of sample tasks on first run
 - Interactive Swagger API documentation
 - Input validation with proper HTTP status codes
 
 ---
 
-## Technologies Used
+# Technologies Used
 
 - Node.js
 - Express.js
+- SQLite
+- sqlite3
 - Swagger UI Express
-- YAML (OpenAPI 3.0)
+- OpenAPI 3.0 (YAML)
 
 ---
 
-## Installation
+# Why SQLite?
 
-### Clone the repository
+SQLite was chosen because it is a lightweight, serverless relational database that stores data in a single file.
+
+It is perfect for learning backend development because:
+
+- No database server installation is required.
+- Easy to set up.
+- Fast and lightweight.
+- Data persists even after restarting the server.
+
+---
+
+# Installation
+
+## Clone the repository
 
 ```bash
 git clone https://github.com/ZahidHussain775/task-manager-api.git
 ```
 
-### Navigate to the project directory
+## Navigate into the project
 
 ```bash
 cd task-manager-api
 ```
 
-### Install dependencies
+## Install dependencies
 
 ```bash
 npm install
@@ -48,7 +68,7 @@ npm install
 
 ---
 
-## Run the Application
+# Run the Application
 
 Start the server:
 
@@ -56,7 +76,13 @@ Start the server:
 npm start
 ```
 
-The server will run on:
+or
+
+```bash
+node app.js
+```
+
+The application will run on:
 
 ```
 http://localhost:3000
@@ -64,9 +90,29 @@ http://localhost:3000
 
 ---
 
-## API Documentation
+# Database
 
-Interactive Swagger documentation is available at:
+The application automatically creates the SQLite database on the first run.
+
+Database location:
+
+```text
+database/tasks.db
+```
+
+When the server starts it will automatically:
+
+- Create the database if it does not exist.
+- Create the `tasks` table if it does not exist.
+- Insert three sample tasks only when the table is empty.
+
+This ensures that restarting the server does not create duplicate data.
+
+---
+
+# API Documentation
+
+Swagger documentation is available at:
 
 ```
 http://localhost:3000/docs
@@ -74,42 +120,23 @@ http://localhost:3000/docs
 
 ---
 
-## API Endpoints
+# API Endpoints
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+|---------|----------|-------------|
 | GET | `/` | Root endpoint |
 | GET | `/health` | Health check |
 | GET | `/tasks` | Get all tasks |
-| GET | `/tasks/:id` | Get a task by ID |
+| GET | `/tasks/:id` | Get task by ID |
 | POST | `/tasks` | Create a new task |
-| PUT | `/tasks/:id` | Update an existing task |
+| PUT | `/tasks/:id` | Update a task |
 | DELETE | `/tasks/:id` | Delete a task |
 
 ---
 
-## Example curl Request
+# Example Requests
 
-### Health Check
-
-```bash
-curl -i http://localhost:3000/health
-```
-
-### Example Response
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json; charset=utf-8
-
-{"status":"ok"}
-```
-
----
-
-## Example Request
-
-### Create a Task
+## Create a Task
 
 **POST** `/tasks`
 
@@ -127,28 +154,77 @@ Response
 {
   "id": 4,
   "title": "Buy milk",
-  "done": false
+  "done": 0
 }
 ```
 
 ---
 
-## HTTP Status Codes
+## Get All Tasks
+
+**GET** `/tasks`
+
+Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Learn Express",
+    "done": 0
+  },
+  {
+    "id": 2,
+    "title": "Build CRUD API",
+    "done": 0
+  },
+  {
+    "id": 3,
+    "title": "Submit Assignment",
+    "done": 1
+  }
+]
+```
+
+---
+
+# HTTP Status Codes
 
 | Status Code | Description |
 |-------------|-------------|
 | 200 | Successful request |
 | 201 | Resource created |
 | 204 | Resource deleted successfully |
-| 400 | Invalid request or validation failed |
+| 400 | Invalid request |
 | 404 | Resource not found |
+| 500 | Internal server error |
 
 ---
 
-## Project Structure
+# Example SQL Query
 
+The following SQL query returns all tasks stored in the database:
+
+```sql
+SELECT * FROM tasks;
 ```
+
+Another useful query to count tasks:
+
+```sql
+SELECT COUNT(*) FROM tasks;
+```
+
+---
+
+# Project Structure
+
+```text
 task-manager-api/
+│
+├── database/
+│   ├── db.js
+│   └── tasks.db
 │
 ├── app.js
 ├── openapi.yaml
@@ -161,41 +237,81 @@ task-manager-api/
 
 ---
 
-## Swagger UI Screenshot
+# Screenshots
 
-> Save your screenshot as **swagger.jpg** in the project root.
+## Swagger UI
 
+Save your Swagger screenshot as:
+
+```
+swagger.jpg
+```
+
+```markdown
 ![Swagger UI](swagger.jpg)
+```
 
 ---
 
-## Sample Task Object
+## SQLite Database
+
+Open `database/tasks.db` using **DB Browser for SQLite** and save a screenshot as:
+
+```
+database-viewer.png
+```
+
+```markdown
+![SQLite Database](database-viewer.png)
+```
+
+---
+
+# Sample Task Object
 
 ```json
 {
   "id": 1,
   "title": "Learn Express",
-  "done": false
+  "done": 0
 }
 ```
 
 ---
 
-## Author
+# Future Improvements
 
-**Zahid Hussain**
-
-GitHub: https://github.com/ZahidHussain775
+- Search tasks using SQL (`LIKE`)
+- Filter completed tasks
+- Sort tasks alphabetically
+- Add timestamps (`created_at`, `updated_at`)
+- Add authentication
+- Migrate to PostgreSQL or MySQL
 
 ---
 
-## Assignment
+# Author
 
-This project was developed as part of the **FlyRank Backend AI Engineering Internship** to demonstrate:
+**Zahid Hussain**
 
-- Building a RESTful API using Express.js
+GitHub:
+
+https://github.com/ZahidHussain775
+
+---
+
+# Assignment
+
+This project was completed as part of the **FlyRank Backend AI Engineering Internship**.
+
+The project demonstrates:
+
+- RESTful API development with Express.js
 - CRUD operations
+- SQLite database integration
+- SQL queries
+- Persistent data storage
 - Request validation
 - Proper HTTP status codes
 - OpenAPI (Swagger) documentation
-- Git and GitHub workflow
+- Git & GitHub workflow
