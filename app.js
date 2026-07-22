@@ -1,8 +1,8 @@
 const express = require("express");
 const swaggerUi = require("swagger-ui-express");
 const yaml = require("yamljs");
-const db = require("./database/db");
 
+const pool = require("./database/postgres");
 const app = express();
 app.use(express.json());
 
@@ -42,40 +42,43 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.get("/tasks", (req, res) => {
-    db.all("SELECT * FROM tasks", [], (err, rows) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+app.get("/tasks", async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM tasks ORDER BY id");
 
-        res.json(rows);
-    });    
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
-app.get("/tasks/:id", (req, res) => {
+app.get("/tasks/:id", async (req, res) => {
     const id = parseInt(req.params.id);
 
-    db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+    try {
+        const result = await pool.query(
+            "SELECT * FROM tasks WHERE id = $1",
+            [id]
+        );
 
-        if (!row) {
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 error: `Task ${id} not found`
             });
         }
 
-        res.json(row);
-    });
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 
-app.post("/tasks", (req, res) => {
+app.post("/tasks", async (req, res) => {
     const { title } = req.body;
 
     if (!title || title.trim() === "") {
@@ -84,26 +87,22 @@ app.post("/tasks", (req, res) => {
         });
     }
 
-    db.run(
-        "INSERT INTO tasks (title, done) VALUES (?, ?)",
-        [title, 0],
-        function (err) {
-            if (err) {
-                return res.status(500).json({
-                    error: err.message
-                });
-            }
+    try {
+        const result = await pool.query(
+            "INSERT INTO tasks (title, done) VALUES ($1, $2) RETURNING *",
+            [title, false]
+        );
 
-            res.status(201).json({
-                id: this.lastID,
-                title,
-                done: 0
-            });
-        }
-    );
+        res.status(201).json(result.rows[0]);
+
+    } catch (err) {
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
-app.put("/tasks/:id", (req, res) => {
+app.put("/tasks/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const { title, done } = req.body;
 
@@ -113,60 +112,74 @@ app.put("/tasks/:id", (req, res) => {
         });
     }
 
-    db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, task) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+    if (title !== undefined && title.trim() === "") {
+        return res.status(400).json({
+            error: "Title is required"
+        });
+    }
 
-        if (!task) {
+    if (done !== undefined && typeof done !== "boolean") {
+        return res.status(400).json({
+            error: "Done must be true or false"
+        });
+    }
+
+    try {
+        // Check if task exists
+        const existing = await pool.query(
+            "SELECT * FROM tasks WHERE id = $1",
+            [id]
+        );
+
+        if (existing.rows.length === 0) {
             return res.status(404).json({
                 error: `Task ${id} not found`
             });
         }
 
+        const task = existing.rows[0];
+
         const updatedTitle = title !== undefined ? title : task.title;
-        const updatedDone = done !== undefined ? (done ? 1 : 0) : task.done;
+        const updatedDone = done !== undefined ? done : task.done;
 
-        db.run(
-            "UPDATE tasks SET title = ?, done = ? WHERE id = ?",
-            [updatedTitle, updatedDone, id],
-            function (err) {
-                if (err) {
-                    return res.status(500).json({
-                        error: err.message
-                    });
-                }
-
-                res.json({
-                    id,
-                    title: updatedTitle,
-                    done: updatedDone
-                });
-            }
+        const result = await pool.query(
+            `UPDATE tasks
+             SET title = $1, done = $2
+             WHERE id = $3
+             RETURNING *`,
+            [updatedTitle, updatedDone, id]
         );
-    });
-});
 
-app.delete("/tasks/:id", (req, res) => {
+        res.json(result.rows[0]);
+
+    } catch (err) {
+        res.status(500).json({
+            error: err.message
+        });
+    }
+});
+app.delete("/tasks/:id", async (req, res) => {
     const id = parseInt(req.params.id);
 
-    db.run("DELETE FROM tasks WHERE id = ?", [id], function (err) {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+    try {
+        const result = await pool.query(
+            "DELETE FROM tasks WHERE id = $1 RETURNING *",
+            [id]
+        );
 
-        if (this.changes === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 error: `Task ${id} not found`
             });
         }
 
         res.status(204).send();
-    });
+
+    } catch (err) {
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 const swaggerDocument = yaml.load("./openapi.yaml");

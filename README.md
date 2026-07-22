@@ -1,8 +1,8 @@
 # Task Manager API
 
-A simple RESTful Task Manager API built with **Node.js**, **Express.js**, **SQLite**, and **Swagger UI** as part of the **FlyRank Backend AI Engineering Internship**.
+A RESTful Task Manager API built with **Node.js**, **Express.js**, **PostgreSQL**, **Docker**, and **Swagger UI** as part of the **FlyRank Backend AI Engineering Internship**.
 
-The project demonstrates how to build a CRUD API with persistent data storage using SQLite while documenting the API using OpenAPI (Swagger).
+The project demonstrates how to build a CRUD API using PostgreSQL for persistent storage while containerizing the entire application with Docker and documenting the API using OpenAPI (Swagger).
 
 ---
 
@@ -14,9 +14,11 @@ The project demonstrates how to build a CRUD API with persistent data storage us
 - Update an existing task
 - Delete a task
 - Health check endpoint
-- Persistent task storage using SQLite
+- Persistent task storage using PostgreSQL
 - Automatic database and table creation
 - Automatic insertion of sample tasks on first run
+- Dockerized application
+- Docker Compose support
 - Interactive Swagger API documentation
 - Input validation with proper HTTP status codes
 
@@ -26,23 +28,43 @@ The project demonstrates how to build a CRUD API with persistent data storage us
 
 - Node.js
 - Express.js
-- SQLite
-- sqlite3
+- PostgreSQL
+- pg
+- Docker
+- Docker Compose
 - Swagger UI Express
 - OpenAPI 3.0 (YAML)
+- dotenv
 
 ---
 
-# Why SQLite?
+# Why PostgreSQL?
 
-SQLite was chosen because it is a lightweight, serverless relational database that stores data in a single file.
+PostgreSQL was chosen because it is one of the most popular open-source relational databases used in production applications.
 
-It is perfect for learning backend development because:
+Benefits include:
 
-- No database server installation is required.
-- Easy to set up.
-- Fast and lightweight.
-- Data persists even after restarting the server.
+- Reliable and production-ready
+- Supports SQL and advanced database features
+- Scales much better than SQLite
+- Stores data permanently
+- Easy to integrate with Docker
+- Widely used in backend development
+
+---
+
+# Why Docker?
+
+Docker packages the application and its dependencies into containers so the project runs the same on every machine.
+
+Benefits include:
+
+- No manual PostgreSQL installation required
+- Same development environment for everyone
+- Easy project setup
+- Isolated services
+- Data persistence using Docker volumes
+- Entire application starts with a single command
 
 ---
 
@@ -68,9 +90,57 @@ npm install
 
 ---
 
-# Run the Application
+# Environment Variables
 
-Start the server:
+Create a `.env` file in the project root.
+
+Example:
+
+```env
+PORT=3000
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=password
+DB_NAME=taskdb
+```
+
+A `.env.example` file is included in the repository.
+
+---
+
+# Running with Docker
+
+Build and start the complete application:
+
+```bash
+docker compose up --build
+```
+
+Run in the background:
+
+```bash
+docker compose up -d
+```
+
+Stop the application:
+
+```bash
+docker compose down
+```
+
+Stop and remove all data (including the PostgreSQL volume):
+
+```bash
+docker compose down -v
+```
+
+---
+
+# Running Without Docker
+
+If PostgreSQL is already installed locally:
 
 ```bash
 npm start
@@ -82,7 +152,7 @@ or
 node app.js
 ```
 
-The application will run on:
+The application will be available at:
 
 ```
 http://localhost:3000
@@ -92,27 +162,38 @@ http://localhost:3000
 
 # Database
 
-The application automatically creates the SQLite database on the first run.
+The project uses **PostgreSQL** as the database.
 
-Database location:
+When the application starts it automatically:
 
-```text
-database/tasks.db
+- Creates the `tasks` table if it does not exist.
+- Inserts three sample tasks only when the table is empty.
+- Connects using environment variables.
+
+Because PostgreSQL uses a Docker volume, data remains available even after restarting the containers.
+
+---
+
+# Docker Architecture
+
 ```
-
-When the server starts it will automatically:
-
-- Create the database if it does not exist.
-- Create the `tasks` table if it does not exist.
-- Insert three sample tasks only when the table is empty.
-
-This ensures that restarting the server does not create duplicate data.
+                Docker Compose
+                      │
+        ┌─────────────┴─────────────┐
+        │                           │
+   Node.js App                 PostgreSQL
+   (Express API)               Database
+        │                           │
+        └──────────────┬────────────┘
+                       │
+                 Docker Network
+```
 
 ---
 
 # API Documentation
 
-Swagger documentation is available at:
+Swagger UI is available at:
 
 ```
 http://localhost:3000/docs
@@ -128,15 +209,15 @@ http://localhost:3000/docs
 | GET | `/health` | Health check |
 | GET | `/tasks` | Get all tasks |
 | GET | `/tasks/:id` | Get task by ID |
-| POST | `/tasks` | Create a new task |
-| PUT | `/tasks/:id` | Update a task |
-| DELETE | `/tasks/:id` | Delete a task |
+| POST | `/tasks` | Create task |
+| PUT | `/tasks/:id` | Update task |
+| DELETE | `/tasks/:id` | Delete task |
 
 ---
 
 # Example Requests
 
-## Create a Task
+## Create Task
 
 **POST** `/tasks`
 
@@ -144,7 +225,7 @@ Request Body
 
 ```json
 {
-  "title": "Buy milk"
+  "title": "Learn Docker"
 }
 ```
 
@@ -153,8 +234,8 @@ Response
 ```json
 {
   "id": 4,
-  "title": "Buy milk",
-  "done": 0
+  "title": "Learn Docker",
+  "done": false
 }
 ```
 
@@ -171,17 +252,17 @@ Example Response
   {
     "id": 1,
     "title": "Learn Express",
-    "done": 0
+    "done": false
   },
   {
     "id": 2,
     "title": "Build CRUD API",
-    "done": 0
+    "done": false
   },
   {
     "id": 3,
     "title": "Submit Assignment",
-    "done": 1
+    "done": true
   }
 ]
 ```
@@ -190,49 +271,71 @@ Example Response
 
 # HTTP Status Codes
 
-| Status Code | Description |
-|-------------|-------------|
-| 200 | Successful request |
-| 201 | Resource created |
-| 204 | Resource deleted successfully |
-| 400 | Invalid request |
-| 404 | Resource not found |
-| 500 | Internal server error |
+| Status Code | Meaning |
+|-------------|---------|
+| 200 | Success |
+| 201 | Resource Created |
+| 204 | Resource Deleted |
+| 400 | Bad Request |
+| 404 | Task Not Found |
+| 500 | Internal Server Error |
 
 ---
 
-# Example SQL Query
+# Example SQL Queries
 
-The following SQL query returns all tasks stored in the database:
+Get all tasks
 
 ```sql
 SELECT * FROM tasks;
 ```
 
-Another useful query to count tasks:
+Get completed tasks
+
+```sql
+SELECT * FROM tasks WHERE done = true;
+```
+
+Count all tasks
 
 ```sql
 SELECT COUNT(*) FROM tasks;
+```
+
+Update all tasks
+
+```sql
+UPDATE tasks SET done = true;
+```
+
+Delete completed tasks
+
+```sql
+DELETE FROM tasks WHERE done = true;
 ```
 
 ---
 
 # Project Structure
 
-```text
+```
 task-manager-api/
 │
 ├── database/
-│   ├── db.js
-│   └── tasks.db
+│   └── postgres.js
 │
 ├── app.js
+├── docker-compose.yml
+├── Dockerfile
 ├── openapi.yaml
 ├── package.json
 ├── package-lock.json
+├── .env.example
 ├── .gitignore
 ├── README.md
-└── swagger.jpg
+└── screenshots/
+    ├── swagger.png
+    └── docker.png
 ```
 
 ---
@@ -241,52 +344,57 @@ task-manager-api/
 
 ## Swagger UI
 
-Save your Swagger screenshot as:
+Save the screenshot as:
 
-```
-swagger.jpg
-```
 
-```markdown
-![Swagger UI](swagger.jpg)
-```
+screenshots/swagger.jpg
 
----
 
-## SQLite Database
+markdown
+![Swagger UI](screenshots/swagger.jpg)
 
-Open `database/tasks.db` using **DB Browser for SQLite** and save a screenshot as:
-
-```
-database-viewer.png
-```
-
-```markdown
-![SQLite Database](database-viewer.png)
-```
 
 ---
 
-# Sample Task Object
+## Docker Containers
 
-```json
-{
-  "id": 1,
-  "title": "Learn Express",
-  "done": 0
-}
-```
+Save a screenshot from Docker Desktop as:
+
+
+screenshots/docker.png
+
+markdown
+![Docker Containers](screenshots/docker.png)
+
+
+---
+
+# Persistence Test
+
+The following steps were performed to verify database persistence:
+
+1. Started the application using Docker Compose.
+2. Created new tasks using the API.
+3. Restarted both the application and PostgreSQL containers.
+4. Retrieved tasks using `GET /tasks`.
+5. Verified that all previously created tasks were still present.
+
+This confirms that PostgreSQL data is stored inside a Docker volume and survives container restarts.
 
 ---
 
 # Future Improvements
 
-- Search tasks using SQL (`LIKE`)
-- Filter completed tasks
-- Sort tasks alphabetically
-- Add timestamps (`created_at`, `updated_at`)
-- Add authentication
-- Migrate to PostgreSQL or MySQL
+- JWT Authentication
+- User Accounts
+- Search Tasks
+- Pagination
+- Filtering & Sorting
+- Redis Caching
+- Unit Testing
+- GitHub Actions CI/CD
+- Deployment with Docker
+- Kubernetes Support
 
 ---
 
@@ -306,12 +414,14 @@ This project was completed as part of the **FlyRank Backend AI Engineering Inter
 
 The project demonstrates:
 
-- RESTful API development with Express.js
+- RESTful API development
 - CRUD operations
-- SQLite database integration
+- PostgreSQL integration
 - SQL queries
-- Persistent data storage
-- Request validation
-- Proper HTTP status codes
-- OpenAPI (Swagger) documentation
+- Docker containerization
+- Docker Compose
+- Persistent storage
+- Environment variables
+- Automatic database initialization
+- Swagger (OpenAPI) documentation
 - Git & GitHub workflow
