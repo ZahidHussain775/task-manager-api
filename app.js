@@ -173,6 +173,10 @@ const swaggerDocument = yaml.load("./openapi.yaml");
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
-});
+if (require.main === module) {
+  app.listen(3000, () => {
+    console.log("Server is running on port 3000");
+  });
+}
+
+module.exports = app;

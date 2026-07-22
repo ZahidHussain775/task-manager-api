@@ -1,4 +1,4 @@
 node_modules/
 .env
 database/tasks.db
-database/tasks.db-journal
+database/tasks.db-journalcoverage/
