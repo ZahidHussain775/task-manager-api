@@ -90,6 +90,31 @@ http://localhost:3000
 
 ---
 
+# Security & Configuration
+
+| Variable | Description |
+|----------|-------------|
+| `API_KEY` | Optional. When set, all mutating endpoints (`POST`, `PUT`, `DELETE`) require a matching `x-api-key` request header. When unset, those endpoints stay open (a warning is logged on startup). |
+
+Additional hardening included:
+
+- **Security headers** via `helmet`.
+- **Strict input validation**: `title` must be a non-empty string (max 255 chars), `done` must be a boolean, and task ids must be positive integers.
+- **Parameterized SQL** for every query (no string concatenation), preventing SQL injection.
+- **Generic 500 responses** — internal error details are logged server-side, not returned to clients.
+- **Request body size limit** of 16kb.
+
+Example authenticated request:
+
+```bash
+curl -X POST http://localhost:3000/tasks \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $API_KEY" \
+  -d '{"title": "Buy milk"}'
+```
+
+---
+
 # Database
 
 The application automatically creates the SQLite database on the first run.
