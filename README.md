@@ -351,7 +351,7 @@ screenshots/swagger.jpg
 
 
 markdown
-![Swagger UI](screenshots/swagger.jpg)
+![Swagger UI](swagger.jpg)
 
 
 ---
@@ -364,7 +364,7 @@ Save a screenshot from Docker Desktop as:
 screenshots/docker.png
 
 markdown
-![Docker Containers](screenshots/docker.png)
+![Docker Containers](docker.png)
 
 
 ---
