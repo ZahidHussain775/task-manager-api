@@ -6,25 +6,16 @@ const db = require("./database/db");
 const app = express();
 app.use(express.json());
 
-
-let tasks = [
-  {
-    id: 1,
-    title: "Learn Express",
-    done: false
-  },
-  {
-    id: 2,
-    title: "Build CRUD API",
-    done: false
-  },
-  {
-    id: 3,
-    title: "Submit Assignment",
-    done: true
-  }
-];
-
+// Parses and validates a `:id` route param. Returns a positive integer, or
+// null when the value is not a valid id so callers can respond with 400
+// instead of silently querying with NaN.
+function parseId(raw) {
+    if (!/^\d+$/.test(raw)) {
+        return null;
+    }
+    const id = Number(raw);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
 
 
 app.get("/", (req, res) => {
@@ -55,7 +46,12 @@ app.get("/tasks", (req, res) => {
 });
 
 app.get("/tasks/:id", (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseId(req.params.id);
+    if (id === null) {
+        return res.status(400).json({
+            error: "Task id must be a positive integer"
+        });
+    }
 
     db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
         if (err) {
@@ -104,7 +100,13 @@ app.post("/tasks", (req, res) => {
 });
 
 app.put("/tasks/:id", (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseId(req.params.id);
+    if (id === null) {
+        return res.status(400).json({
+            error: "Task id must be a positive integer"
+        });
+    }
+
     const { title, done } = req.body;
 
     if (title === undefined && done === undefined) {
@@ -150,7 +152,12 @@ app.put("/tasks/:id", (req, res) => {
 });
 
 app.delete("/tasks/:id", (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseId(req.params.id);
+    if (id === null) {
+        return res.status(400).json({
+            error: "Task id must be a positive integer"
+        });
+    }
 
     db.run("DELETE FROM tasks WHERE id = ?", [id], function (err) {
         if (err) {
@@ -169,10 +176,54 @@ app.delete("/tasks/:id", (req, res) => {
     });
 });
 
-const swaggerDocument = yaml.load("./openapi.yaml");
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+try {
+    const swaggerDocument = yaml.load("./openapi.yaml");
+    app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+} catch (err) {
+    // Docs are non-critical; log and keep serving the API rather than
+    // crashing the whole process on a malformed/missing spec.
+    console.error("Failed to load OpenAPI docs:", err.message);
+}
 
+// Unknown routes get a consistent JSON 404 instead of the default HTML page.
+app.use((req, res) => {
+    res.status(404).json({
+        error: `Cannot ${req.method} ${req.originalUrl}`
+    });
+});
 
-app.listen(3000, () => {
+// Centralized error handler. Without it, errors such as malformed JSON bodies
+// leak an HTML stack trace (exposing internal file paths) to clients.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    if (err.type === "entity.parse.failed") {
+        return res.status(400).json({
+            error: "Invalid JSON in request body"
+        });
+    }
+
+    console.error("Unhandled request error:", err);
+    res.status(err.status || 500).json({
+        error: "Internal server error"
+    });
+});
+
+const server = app.listen(3000, () => {
   console.log("Server is running on port 3000");
+});
+
+server.on("error", (err) => {
+    console.error("Failed to start server:", err.message);
+    process.exit(1);
+});
+
+// Surface programming errors that would otherwise be silently swallowed by
+// Node's default handlers and leave the process in an undefined state.
+process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled promise rejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught exception:", err);
+    process.exit(1);
 });
