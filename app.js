@@ -2,28 +2,10 @@ const express = require("express");
 const swaggerUi = require("swagger-ui-express");
 const yaml = require("yamljs");
 const db = require("./database/db");
+const { sendError, handleDbError, sendNotFound } = require("./utils/responses");
 
 const app = express();
 app.use(express.json());
-
-
-let tasks = [
-  {
-    id: 1,
-    title: "Learn Express",
-    done: false
-  },
-  {
-    id: 2,
-    title: "Build CRUD API",
-    done: false
-  },
-  {
-    id: 3,
-    title: "Submit Assignment",
-    done: true
-  }
-];
 
 
 
@@ -44,11 +26,7 @@ app.get("/health", (req, res) => {
 
 app.get("/tasks", (req, res) => {
     db.all("SELECT * FROM tasks", [], (err, rows) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+        if (handleDbError(res, err)) return;
 
         res.json(rows);
     });    
@@ -58,16 +36,10 @@ app.get("/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id);
 
     db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+        if (handleDbError(res, err)) return;
 
         if (!row) {
-            return res.status(404).json({
-                error: `Task ${id} not found`
-            });
+            return sendNotFound(res, id);
         }
 
         res.json(row);
@@ -79,20 +51,14 @@ app.post("/tasks", (req, res) => {
     const { title } = req.body;
 
     if (!title || title.trim() === "") {
-        return res.status(400).json({
-            error: "Title is required"
-        });
+        return sendError(res, 400, "Title is required");
     }
 
     db.run(
         "INSERT INTO tasks (title, done) VALUES (?, ?)",
         [title, 0],
         function (err) {
-            if (err) {
-                return res.status(500).json({
-                    error: err.message
-                });
-            }
+            if (handleDbError(res, err)) return;
 
             res.status(201).json({
                 id: this.lastID,
@@ -108,22 +74,14 @@ app.put("/tasks/:id", (req, res) => {
     const { title, done } = req.body;
 
     if (title === undefined && done === undefined) {
-        return res.status(400).json({
-            error: "Request body cannot be empty"
-        });
+        return sendError(res, 400, "Request body cannot be empty");
     }
 
     db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, task) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+        if (handleDbError(res, err)) return;
 
         if (!task) {
-            return res.status(404).json({
-                error: `Task ${id} not found`
-            });
+            return sendNotFound(res, id);
         }
 
         const updatedTitle = title !== undefined ? title : task.title;
@@ -133,11 +91,7 @@ app.put("/tasks/:id", (req, res) => {
             "UPDATE tasks SET title = ?, done = ? WHERE id = ?",
             [updatedTitle, updatedDone, id],
             function (err) {
-                if (err) {
-                    return res.status(500).json({
-                        error: err.message
-                    });
-                }
+                if (handleDbError(res, err)) return;
 
                 res.json({
                     id,
@@ -153,16 +107,10 @@ app.delete("/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id);
 
     db.run("DELETE FROM tasks WHERE id = ?", [id], function (err) {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
+        if (handleDbError(res, err)) return;
 
         if (this.changes === 0) {
-            return res.status(404).json({
-                error: `Task ${id} not found`
-            });
+            return sendNotFound(res, id);
         }
 
         res.status(204).send();
